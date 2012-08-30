@@ -20,7 +20,9 @@ Or install it yourself as:
 
 Usage is pretty simple:
 
-    sms = Smsforall::Sms.new("test","test", :test)
+    sms = Smsforall::Sms.new("test", "test", :test) #  for test
+	# for production:
+    # sms = Smsforall::Sms.new("login", "password")
     balance = sms.get_balance()
     message = sms.send_message("sender", "sms text", "79251233232")
     status = sms.get_status(message)
