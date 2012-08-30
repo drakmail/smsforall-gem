@@ -18,7 +18,17 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Usage is pretty simple:
+
+    sms = Smsforall::Sms.new("test","test", :test)
+    balance = sms.get_balance()
+    message = sms.send_message("sender", "sms text", "79251233232")
+    status = sms.get_status(message)
+    puts "#{balance}, #{message}, #{status}"
+
+## Command-line client
+
+smsforall-gem also provides command line utility `smsforall`. You may see usage instructions by executing `smsforall -h`.
 
 ## Contributing
 
