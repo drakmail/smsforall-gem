@@ -15,7 +15,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
   gem.version       = Smsforall::VERSION
 
-  gem.add_dependency 'json'
+  gem.add_dependency 'json_pure'
 
   gem.add_development_dependency 'rspec'
 end

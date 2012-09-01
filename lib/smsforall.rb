@@ -2,7 +2,7 @@ require "smsforall/version"
 require 'net/http'
 require 'cgi'
 require 'digest'
-require 'json'
+require 'json/pure'
 
 # Main module for Smsforall API class
 module Smsforall
