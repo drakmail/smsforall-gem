@@ -16,6 +16,7 @@ Gem::Specification.new do |gem|
   gem.version       = Smsforall::VERSION
 
   gem.add_dependency 'json_pure'
+  gem.add_dependency 'logger-colors'
 
   gem.add_development_dependency 'rspec'
 end

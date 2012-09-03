@@ -2,90 +2,128 @@
 
 require 'smsforall'
 require 'optparse'
+require 'logger/colors'
 
-# Parameters parsing
-options = {}
- 
-optparse = OptionParser.new do|opts|
-  opts.banner = "Usage: smsforall (-l login -p password|--test) COMMAND [options] ..."
+class SmsforallScript
 
-  opts.separator  ""
-  opts.separator  "Commands"
-  opts.separator  "     balance                   : get balance"
-  opts.separator  "     send SENDER NUMBER TEXT   : send SMS with TEXT to NUMBER"
-  opts.separator  "     status TRANSACTION        : get status of transaction"
-  opts.separator  ""
-  opts.separator  "Options"
- 
-  # Define the options, and what they do
-  options[:login] = nil
-  opts.on( '-l', '--login LOGIN', 'Login' ) do|login|
-    options[:login] = login
+  def initialize
+    @log = Logger.new(STDOUT)
+    @log.formatter = proc{ |level, datetime, progname, msg| "[#{level}]: #{msg}\n" }
+    @log.level = Logger::ERROR
+    parse_parameters
+    @sms = Smsforall::Sms.new(@options[:login],@options[:password], @options[:test])
+    route
   end
- 
-  options[:password] = nil
-  opts.on( '-p', '--password PASSWORD', 'Password' ) do|password|
-    options[:password] = password
+
+  private
+
+  def parse_parameters
+    # Parameters parsing
+    @options = {}
+    
+    optparse = OptionParser.new do|opts|
+      opts.banner = "Usage: smsforall (-l login -p password|--test) [-v|V] [-q] COMMAND [options] ..."
+
+      opts.separator  ""
+      opts.separator  "Commands"
+      opts.separator  "     balance                   : get balance"
+      opts.separator  "     send SENDER NUMBER TEXT   : send SMS with TEXT to NUMBER"
+      opts.separator  "     status TRANSACTION        : get status of transaction"
+      opts.separator  ""
+      opts.separator  "Options"
+      
+      # Define the options, and what they do
+      @options[:login] = nil
+      opts.on( '-l', '--login LOGIN', 'Login' ) do|login|
+        @options[:login] = login
+      end
+      
+      @options[:password] = nil
+      opts.on( '-p', '--password PASSWORD', 'Password' ) do|password|
+        @options[:password] = password
+      end
+      
+      @options[:test] = :production
+      opts.on( '-t', '--test', 'Enable test mode' ) do
+        @options[:test] = :test
+      end
+
+      @options[:verbose] = false
+      opts.on( '-v', '--verbose', 'Verbose output' ) do
+        @options[:verbose] = true
+      end
+
+      @options[:more_verbose] = false
+      opts.on( '-V', '--more_verbose', 'More verbose output' ) do
+        @options[:more_verbose] = true
+      end
+
+      @options[:quiet] = false
+      opts.on( '-q', '--quiet', 'Quiet mode' ) do
+        @options[:quiet] = true
+      end
+      
+      opts.on( '-h', '--help', 'Display this screen' ) do
+        puts opts
+        exit
+      end
+    end
+    
+    optparse.parse!
+
+    if @options[:verbose] then @log.level = Logger::WARN end
+    if @options[:more_verbose] then @log.level = Logger::DEBUG end
+    if @options[:quiet] then @log.level = Logger::FATAL end
+
+    if @options[:test] == :test
+      @log.warn "test mode enabled!"
+      @options[:login] = "test"
+      @options[:password] = "test"
+    end
+
+    if not (@options[:login] && @options[:password])
+      @log.error "you must provide login and password!"
+      exit
+    end
+
+    if not %w[balance send status].include?(ARGV[0])
+      @log.error "command not defined!"
+      exit
+    end
   end
- 
-  options[:test] = :production
-  opts.on( '-t', '--test', 'Enable test mode' ) do
-    options[:test] = :test
+
+  # route command
+  def route
+    case ARGV[0]
+      when "balance" then get_balance
+      when "send"    then send_sms(ARGV[1], ARGV[2], ARGV[3])
+      when "status"  then get_status(ARGV[1])
+    end
   end
- 
-  opts.on( '-h', '--help', 'Display this screen' ) do
-    puts opts
-    exit
+
+  # actions
+  def get_balance()
+    @log.info "getting balance for #{@options[:login]}"
+    balance = @sms.get_balance()
+    puts "#{balance}"
   end
-end
- 
-optparse.parse!
 
-if options[:test] == :test
-  puts "[WARNING]: test mode enabled!"
-  options[:login] = "test"
-  options[:password] = "test"
-end
-
-if not (options[:login] && options[:password])
-  puts "[ERROR]: you must provide login and password!"
-  exit
-end
-
-if not %w[balance send status].include?(ARGV[0])
-  puts "[ERROR]: command not defined!"
-  exit
-end
-
-# actions
-def get_balance(login, password, test)
-  sms = Smsforall::Sms.new(login,password, test)
-  puts "[INFO]: getting balance for #{login}"
-  balance = sms.get_balance()
-  puts "#{balance}"
-end
-
-def send_sms(login, password, test, sender, number, text)
-  if not (sender && number && text)
-    puts "[ERROR]: wrong number of parameters!"
-    exit
+  def send_sms(sender, number, text)
+    if not (sender && number && text)
+      @log.error "wrong number of parameters!"
+      exit
+    end
+    @log.info "sending SMS to #{number}"
+    transaction = @sms.send_message(sender, text, number)
+    puts "#{transaction}"
   end
-  puts "[INFO]: sending SMS to #{number}"
-  sms = Smsforall::Sms.new(login,password, test)
-  transaction = sms.send_message(sender, text, number)
-  puts "#{transaction}"
+
+  def get_status(transaction)
+    @log.info "getting status"
+    status = @sms.get_status(transaction)["status"]
+    puts "#{status}"
+  end
+  
 end
 
-def get_status(login, password, test, transaction)
-  puts "[INFO]: getting status"
-  sms = Smsforall::Sms.new(login,password, test)
-  status = sms.get_status(transaction)["status"]
-  puts "#{status}"
-end
-
-# route command
-action = case ARGV[0]
-           when "balance" then get_balance(options[:login], options[:password], options[:test])
-           when "send" then send_sms(options[:login], options[:password], options[:test], ARGV[1], ARGV[2], ARGV[3])
-           when "status" then get_status(options[:login], options[:password], options[:test], ARGV[1])
-end
+sms = SmsforallScript.new
