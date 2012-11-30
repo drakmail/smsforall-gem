@@ -25,6 +25,7 @@ module Smsforall
 
     # Send message
     def send_message(sender,text,msisdn)
+      if sender.size > 11 then raise 'Sender name to long!' end
       do_request("send", { :msisdn => msisdn, :sender => sender, :text => text })["transactionid"]
     end
     
