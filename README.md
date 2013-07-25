@@ -1,5 +1,7 @@
 # Smsforall
 
+[![Gem Version](https://badge.fury.io/rb/smsforall.png)](http://badge.fury.io/rb/smsforall)
+
 Client for smsforall.ru site API (http://www.smsforall.ru/doc/api/)
 
 ## Installation
